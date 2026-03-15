@@ -268,7 +268,7 @@ st.caption("Upload your Zoom attendee sheet to generate an insights report.")
 
 attendee_file = st.file_uploader("Upload Attendee Sheet (.csv)", type=["csv"])
 
-use_10min = st.checkbox("Check for 10 minutes interval, ideal for onboarding/intro session.")
+use_10min = st.checkbox("Check for 10 minutes interval. Default is 15 mins.")
 Interval = 10 if use_10min else 15
 
 include_chat = st.checkbox("Include chat file for link extraction.")
