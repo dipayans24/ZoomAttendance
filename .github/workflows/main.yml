@@ -1,8 +1,8 @@
 name: Keep ZoomAttendance App Awake
 on:
   schedule:
-    # Runs every 6 hours (00:00, 06:00, 12:00, 18:00 UTC)
-    - cron: '0 */6 * * *'
+    # Runs every 1 hours (00:00, 06:00, 12:00, 18:00 UTC)
+    - cron: '0 */1 * * *'
   workflow_dispatch: # Allows manual triggering from the Actions tab
 
 jobs:
