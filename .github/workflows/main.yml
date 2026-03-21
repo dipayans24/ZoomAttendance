@@ -18,12 +18,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install dependencies
-        run: |
-          pip install selenium
-
-      - name: Install Chrome and ChromeDriver
-        uses: browser-actions/setup-chrome@v1
+     
 
       - name: Run Selenium script
         run: |
