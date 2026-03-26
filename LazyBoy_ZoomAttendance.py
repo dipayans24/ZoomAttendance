@@ -185,7 +185,7 @@ def process(attendee_path, chat_path=[], Interval=15):
     df = attendanceDf
 
     # ── Extract topic & panelist from raw file ────────────────────────────────
-        contents = readFile(attendee_path)
+    contents = readFile(attendee_path)
     topic = None
     panelists = None
     try:
