@@ -269,7 +269,7 @@ def process(attendee_path, chat_path=[], Interval=15):
 
 st.set_page_config(page_title="Attendance Insights", page_icon="📊", layout="centered")
 st.title("📊 Attendance Insights Generator")
-st.caption("Upload your Zoom attendee sheet to generate an insights report.")
+st.caption("Upload your Zoom attendee report to generate an insights report.")
 
 attendee_file = st.file_uploader("Upload Attendee Sheet (.csv)", type=["csv"])
 
