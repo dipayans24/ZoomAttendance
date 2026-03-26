@@ -284,7 +284,7 @@ if include_chat:
 
 if st.button("Generate Report", type="primary"):
     if attendee_file is None:
-        st.error("Please upload an attendee sheet to continue.")
+        st.error("Please upload an zoom attendee report to continue.")
     elif include_chat and chat_file is None:
         st.error("Please upload a chat file or uncheck the option.")
     else:
