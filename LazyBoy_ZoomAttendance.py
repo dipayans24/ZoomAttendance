@@ -27,34 +27,34 @@ def readFile(filePath):
     contents = [i.decode("utf-8").strip() for i in contents]
     return contents
 
-def createGraphs(df, attendanceDf):
-    fig, ax = plt.subplots()
-    ax.plot(df["Time"], df["Attendance"], label="Line")
-    ax.set_title("Time-Attendance Plot")
+# def createGraphs(df, attendanceDf):
+#     fig, ax = plt.subplots()
+#     ax.plot(df["Time"], df["Attendance"], label="Line")
+#     ax.set_title("Time-Attendance Plot")
 
-    manual_ticks_x = df["Time"].to_list()
-    ax.set_xticks(manual_ticks_x)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
+#     manual_ticks_x = df["Time"].to_list()
+#     ax.set_xticks(manual_ticks_x)
+#     plt.xticks(rotation=45)
+#     plt.tight_layout()
 
-    y_max = attendanceDf["Attendance"].max()
-    x_max = attendanceDf[attendanceDf["Attendance"] == attendanceDf["Attendance"].max()].loc[:, "Time"].to_list()[0]
+#     y_max = attendanceDf["Attendance"].max()
+#     x_max = attendanceDf[attendanceDf["Attendance"] == attendanceDf["Attendance"].max()].loc[:, "Time"].to_list()[0]
 
-    ax.scatter(x_max, y_max, color="red", s=80, zorder=3, label="Peak")
-    ax.annotate(
-        f"(Peak {x_max}, {y_max})",
-        xy=(x_max, y_max),
-        xytext=(x_max, y_max),
-        arrowprops=dict(arrowstyle="<-", color="red")
-    )
+#     ax.scatter(x_max, y_max, color="red", s=80, zorder=3, label="Peak")
+#     ax.annotate(
+#         f"(Peak {x_max}, {y_max})",
+#         xy=(x_max, y_max),
+#         xytext=(x_max, y_max),
+#         arrowprops=dict(arrowstyle="<-", color="red")
+#     )
 
-    img_data = BytesIO()
-    fig.savefig(img_data, format='png')
-    img_data.seek(0)
-    plt.close(fig)
-    return img_data
+#     img_data = BytesIO()
+#     fig.savefig(img_data, format='png')
+#     img_data.seek(0)
+#     plt.close(fig)
+#     return img_data
 
-def createGraph(df, attendanceDf, Graph):
+def createGraph(df, attendanceDf, Graph, topicName =None):
     # Convert date to string to avoid JSON serialization error
     y_max = attendanceDf["Attendance"].max()
     x_max = attendanceDf[attendanceDf["Attendance"] == y_max]["Time"].iloc[0]
@@ -92,7 +92,7 @@ def createGraph(df, attendanceDf, Graph):
     )
 
     chart = (line + peak_point + peak_annotation).properties(
-        title="Time-Attendance Plot",
+        title="Time-Attendance Plot" if topicName is None else topicName,
         width=600,
         height=400
     )
@@ -183,24 +183,29 @@ def process(attendee_path, chat_path=[], Interval=15):
     Summary["Time"] = pd.to_datetime(Summary["Time"]).dt.strftime("%I:%M %p").astype(str)
     
     df = attendanceDf
-    img_data = createGraph(df, attendanceDf, Graph)
 
     # ── Extract topic & panelist from raw file ────────────────────────────────
-    contents = readFile(attendee_path)
+        contents = readFile(attendee_path)
     topic = None
     panelists = None
-    for line in contents[:50]:
-        if line.startswith("Topic"):
-            topic = contents.index(line) + 1
-        if line.startswith("Panelist Details"):
-            panelists = contents.index(line) + 2
+    try:
+        for line in contents[:50]:
+            if line.startswith("Topic"):
+                topic = contents.index(line) + 1
+            if line.startswith("Panelist Details"):
+                panelists = contents.index(line) + 2
 
-    topicName = contents[topic].split(",")[0] if topic is not None else "Summary"
+        topicName = contents[topic].split(",")[0] if topic is not None else "Summary"
+    except:
+        topicName = "Summary"
+        panelists = None
 
     try:
         mentorName = contents[panelists].split(",")[1]
     except Exception:
         mentorName = "Simulive"
+
+    img_data = createGraph(df, attendanceDf, Graph, f"{topicName} ---- ({mentorName})")
 
     # ── Chat links (optional) ─────────────────────────────────────────────────
     chatDf = None
