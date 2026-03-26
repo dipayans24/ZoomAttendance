@@ -322,7 +322,7 @@ if st.button("Generate Report", type="primary"):
                     mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
                 )
             except Exception as e:
-                st.error(f"An error occurred while processing: {e}")
+                st.error(f"Please upload only the Zoom Webinar Attendee report.")
             finally:
                 # Clean up temp files
                 if os.path.exists(attendee_path):
