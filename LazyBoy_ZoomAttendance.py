@@ -136,8 +136,11 @@ def process(attendee_path, chat_path=[], Interval=15):
 
     attendanceDf = pd.DataFrame(columns=["DateTime", "Attendance"])
 
-    minTime = attendance["Join Time"].min()
-    maxTime = attendance["Join Time"].max()
+    df = pd.read_csv(filePath, sep=",",skiprows=2, nrows=1).loc[:, ["Actual Start Time" ,"Actual Duration (minutes)"]]
+    df["Actual Start Time"] = df["Actual Start Time"].apply(lambda x: pd.to_datetime(x))
+    minTime = df.iat[0,0]
+    maxTime = df.iat[0,0]+pd.to_timedelta(df.iat[0,1], unit="minute")
+    
     totalDuration = maxTime - minTime
     totalDurationInMinutes = round(totalDuration.seconds / 60)
     startTime = round_to_quarter(minTime)
