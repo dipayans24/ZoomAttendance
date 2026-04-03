@@ -4,3 +4,4 @@ xlsxwriter
 openpyxl
 vl-convert-python
 altair
+numpy
