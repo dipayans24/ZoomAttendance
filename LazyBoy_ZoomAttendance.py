@@ -118,7 +118,7 @@ def save_upload(uploaded_file):
 
 
 def process(attendee_path, chat_path=[], Interval=15):
-    # ── Read attendee CSV (skip bad header rows) ──────────────────────────────
+    # ── Read attendee CSV ─────────────────────────────────────────────────────
     cnt = 0
     attendance = None
     while cnt is not None:
@@ -134,42 +134,45 @@ def process(attendee_path, chat_path=[], Interval=15):
         lambda x: pd.to_datetime(x, format="%m/%d/%Y %I:%M:%S %p")
     )
 
-    attendanceDf = pd.DataFrame(columns=["DateTime", "Attendance"])
-
-    df = pd.read_csv(attendee_path, sep=",",skiprows=2, nrows=1).loc[:, ["Actual Start Time" ,"Actual Duration (minutes)"]]
+    df = pd.read_csv(attendee_path, sep=",", skiprows=2, nrows=1).loc[:, ["Actual Start Time", "Actual Duration (minutes)"]]
     df["Actual Start Time"] = df["Actual Start Time"].apply(lambda x: pd.to_datetime(x))
-    minTime = df.iat[0,0]
-    maxTime = df.iat[0,0]+pd.to_timedelta(df.iat[0,1], unit="minute")
-    
-    totalDuration = maxTime - minTime
-    totalDurationInMinutes = round(totalDuration.seconds / 60)
+    minTime = df.iat[0, 0]
+    maxTime = df.iat[0, 0] + pd.to_timedelta(df.iat[0, 1], unit="minute")
+
+    totalDurationInMinutes = round((maxTime - minTime).seconds / 60)
     startTime = round_to_quarter(minTime)
 
-    progress = st.progress(0, text="Processing attendance data…")
-    total_steps = totalDurationInMinutes * 12  # 60/5 = 12 steps per minute
-    step = 0
+    # ── Vectorized attendance counting ────────────────────────────────────────
+    total_seconds = totalDurationInMinutes * 60
+    offsets = np.arange(0, total_seconds, 5)
+    all_times = [startTime + timedelta(seconds=int(s)) for s in offsets]
 
-    for min_ in range(0, totalDurationInMinutes, 1):
-        for sec in range(0, 60, 5):
-            aTime = startTime + timedelta(hours=0, minutes=min_, seconds=sec)
-            attendanceDf.loc[len(attendanceDf), ["DateTime", "Attendance"]] = [
-                aTime,
-                len(attendance[
-                    (attendance["Join Time"].dt.time <= aTime.time()) &
-                    (attendance["Leave Time"].dt.time >= aTime.time())
-                ])
-            ]
-            step += 1
-            progress.progress(min(step / max(total_steps, 1), 1.0), text="Processing attendance data…")
+    # Extract join/leave times once as numpy arrays for fast comparison
+    join_times  = attendance["Join Time"].dt.time.values
+    leave_times = attendance["Leave Time"].dt.time.values
 
-    progress.empty()
+    def count_at(t):
+        t_time = t.time()
+        return int(np.sum((join_times <= t_time) & (leave_times >= t_time)))
 
-    attendanceDf.insert(loc=1, column="Time", value=attendanceDf["DateTime"].apply(lambda x: datetime.strftime(x, "%H:%M")))
+    with st.spinner("Processing attendance data…"):
+        attendance_counts = [count_at(t) for t in all_times]
+
+    attendanceDf = pd.DataFrame({
+        "DateTime": all_times,
+        "Attendance": attendance_counts
+    })
+
+    # ── Summarise ─────────────────────────────────────────────────────────────
+    attendanceDf.insert(loc=1, column="Time",
+                        value=attendanceDf["DateTime"].apply(lambda x: datetime.strftime(x, "%H:%M")))
     attendanceDf["Date"] = attendanceDf["DateTime"].astype("M8[ns]").dt.date
-    attendanceDf = attendanceDf.loc[:, ["Date", "Time", "Attendance"]].groupby(by=["Date", "Time"], as_index=False).max()
+    attendanceDf = attendanceDf.loc[:, ["Date", "Time", "Attendance"]].groupby(
+        by=["Date", "Time"], as_index=False).max()
 
     Summary = attendanceDf[
-        (pd.to_datetime(attendanceDf.Time, format="%H:%M").dt.minute.isin([_ for _ in range(0, 60, Interval)])) |
+        (pd.to_datetime(attendanceDf.Time, format="%H:%M").dt.minute.isin(
+            [_ for _ in range(0, 60, Interval)])) |
         (attendanceDf["Time"] == attendanceDf["Time"].min())
     ]
     Graph = Summary
@@ -179,15 +182,16 @@ def process(attendee_path, chat_path=[], Interval=15):
     Summary = Summary.reindex(columns=["Date", "Time", "Attendance"])
     attendanceDf = attendanceDf.reindex(columns=["Date", "Time", "Attendance"])
 
-    if Summary.iloc[0,2] == 0:
-        Summary.loc[Summary.iloc[0, 2], "Attendance"] = attendanceDf[attendanceDf["Attendance"] != 0].iloc[0, 2]
+    if Summary.iloc[0, 2] == 0:
+        Summary.loc[Summary.iloc[0, 2], "Attendance"] = attendanceDf[
+            attendanceDf["Attendance"] != 0].iloc[0, 2]
 
     Summary["Date"] = Summary["Date"].astype(str)
     Summary["Time"] = pd.to_datetime(Summary["Time"]).dt.strftime("%I:%M %p").astype(str)
-    
+
     df = attendanceDf
 
-    # ── Extract topic & panelist from raw file ────────────────────────────────
+    # ── Extract topic & panelist ──────────────────────────────────────────────
     contents = readFile(attendee_path)
     topic = None
     panelists = None
@@ -197,9 +201,8 @@ def process(attendee_path, chat_path=[], Interval=15):
                 topic = contents.index(line) + 1
             if line.startswith("Panelist Details"):
                 panelists = contents.index(line) + 2
-
         topicName = contents[topic].split(",")[0] if topic is not None else "Summary"
-    except:
+    except Exception:
         topicName = "Summary"
         panelists = None
 
@@ -212,7 +215,6 @@ def process(attendee_path, chat_path=[], Interval=15):
 
     # ── Chat links (optional) ─────────────────────────────────────────────────
     chatDf = None
-
     if len(chat_path) != 0:
         chats = []
         for filename in chat_path:
@@ -225,29 +227,32 @@ def process(attendee_path, chat_path=[], Interval=15):
             if ValidComment.find("panelists:") > -1 or ValidComment.find(" Everyone:") > -1 or ValidComment.find("(direct message)") > -1:
                 data.loc[len(data), "TimeStamp"] = ValidComment
             else:
-                data.loc[len(data)-1, "Comments"] = ValidComment
+                data.loc[len(data) - 1, "Comments"] = ValidComment
 
         data["Time"] = data.TimeStamp.str.split(" ", n=1, expand=True)[0]
         data["Info"] = data.TimeStamp.str.split(" ", n=1, expand=True)[1]
         data["From"] = data["Info"].str.split(" to ", n=1, expand=True)[0]
-        data["To"]  = data["Info"].str.split(" to ", n=1, expand=True)[1]
+        data["To"]   = data["Info"].str.split(" to ", n=1, expand=True)[1]
         data["From"] = data["From"].str.replace("From", "").str.strip()
-        data["To"] = data["To"].str.replace(":", "").str.strip()
+        data["To"]   = data["To"].str.replace(":", "").str.strip()
         data["Comments"] = data["Comments"].str.strip()
-        data["To"] = data["To"].apply(lambda x: x.replace(", Hosts and panelists", "").replace(", host and panelists", "") if x.find(",") > -1 else x )
+        data["To"] = data["To"].apply(
+            lambda x: x.replace(", Hosts and panelists", "").replace(", host and panelists", "")
+            if x.find(",") > -1 else x)
         data = data.loc[:, ["Time", "From", "To", "Comments"]]
 
-        chatDf = data[(data["From"].str.lower().str.contains("team be10x") | data["From"].str.lower().str.contains("anushka")) \
-                    & data["Comments"].str.contains("://")]
-
+        chatDf = data[
+            (data["From"].str.lower().str.contains("team be10x") |
+             data["From"].str.lower().str.contains("anushka")) &
+            data["Comments"].str.contains("://")
+        ]
         chatDf = chatDf[chatDf["Comments"].str.contains(r'^(https://)', regex=True)]
-        chatDf = chatDf.drop_duplicates(subset= "Comments")
-        chatDf = chatDf[["Time","Comments" ]]
+        chatDf = chatDf.drop_duplicates(subset="Comments")
+        chatDf = chatDf[["Time", "Comments"]]
         chatDf["Time"] = pd.to_datetime(chatDf["Time"]).dt.strftime("%I:%M:%S %p").astype(str)
-        
         chatDf.sort_values(by="Time", ascending=True, inplace=True)
 
-    # ── Write output Excel to BytesIO ─────────────────────────────────────────
+    # ── Write output Excel ────────────────────────────────────────────────────
     output_buffer = BytesIO()
     with pd.ExcelWriter(output_buffer, engine="xlsxwriter", mode="w") as file:
         workbook = file.book
