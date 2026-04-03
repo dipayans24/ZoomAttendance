@@ -8,7 +8,7 @@ import tempfile
 import altair as alt
 import vl_convert as vlc
 from io import BytesIO
-
+import numpy as np
 # ─── Helpers (unchanged logic) ───────────────────────────────────────────────
 
 def round_to_quarter(dt):
