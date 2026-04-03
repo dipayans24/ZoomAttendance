@@ -148,11 +148,11 @@ def process(attendee_path, chat_path=[], Interval=15):
     all_times = [startTime + timedelta(seconds=int(s)) for s in offsets]
 
     # Extract join/leave times once as numpy arrays for fast comparison
-    join_times  = attendance["Join Time"].dt.time.values
-    leave_times = attendance["Leave Time"].dt.time.values
+    join_times  = attendance["Join Time"].values
+    leave_times = attendance["Leave Time"].values
 
     def count_at(t):
-        t_time = t.time()
+        t_time = t
         return int(np.sum((join_times <= t_time) & (leave_times >= t_time)))
 
     with st.spinner("Processing attendance data…"):
