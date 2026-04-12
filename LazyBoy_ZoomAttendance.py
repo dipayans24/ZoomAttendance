@@ -167,6 +167,12 @@ def process(attendee_path, chat_path=[], Interval=15):
     attendanceDf.insert(loc=1, column="Time",
                         value=attendanceDf["DateTime"].apply(lambda x: datetime.strftime(x, "%H:%M")))
     attendanceDf["Date"] = attendanceDf["DateTime"].astype("M8[ns]").dt.date
+    
+    try:
+        attendanceDf["Attendance"] = attendanceDf["Attendance"].replace(0, pd.NA).ffill().bfill()
+    except:
+        pass
+        
     attendanceDf = attendanceDf.loc[:, ["Date", "Time", "Attendance"]].groupby(
         by=["Date", "Time"], as_index=False).max()
 
