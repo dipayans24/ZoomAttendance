@@ -214,10 +214,12 @@ def process(attendee_path, chat_path=[], Interval=15):
 
     try:
         mentorName = contents[panelists].split(",")[1]
+        tn = f"{topicName} ---- ({mentorName})"
     except Exception:
-        mentorName = "Simulive"
+        mentorName = ""
+        tn = f"{topicName}"
 
-    img_data = createGraph(df, attendanceDf, Graph, f"{topicName} ---- ({mentorName})")
+    img_data = createGraph(df, attendanceDf, Graph, tn)
 
     # ── Chat links (optional) ─────────────────────────────────────────────────
     chatDf = None
