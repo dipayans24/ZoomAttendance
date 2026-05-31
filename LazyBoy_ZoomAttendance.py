@@ -272,7 +272,7 @@ def process(attendee_path, chat_path=[], Interval=15):
         worksheet.insert_image("B2", "plot.png", {"image_data": img_data})
 
         attendanceDf.to_excel(file, sheet_name="Data", index=False)
-        Summary.to_excel(file, sheet_name=topicName[:30], index=False)
+        Summary.to_excel(file, sheet_name='Summary', index=False)
         attendanceDf.drop_duplicates(subset=attendanceDf.columns)\
                     .sort_values(by="Attendance", ascending=False)\
                     .head(10)\
