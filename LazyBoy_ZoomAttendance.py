@@ -118,6 +118,8 @@ def save_upload(uploaded_file):
 
 
 def process(attendee_path, chat_path=[], Interval=15):
+    # Pre-compile regex pattern at module level (avoids recompilation on every call)
+    _INVALID_CHARS = re.compile(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]')
     # ── Read attendee CSV ─────────────────────────────────────────────────────
     cnt = 0
     attendance = None
@@ -207,7 +209,9 @@ def process(attendee_path, chat_path=[], Interval=15):
                 topic = contents.index(line) + 1
             if line.startswith("Panelist Details"):
                 panelists = contents.index(line) + 2
+            
         topicName = contents[topic].split(",")[0] if topic is not None else "Summary"
+        topicName =  _INVALID_CHARS.sub('', topicName)
     except Exception:
         topicName = "Summary"
         panelists = None
