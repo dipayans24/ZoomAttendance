@@ -287,7 +287,7 @@ def process(attendee_path, chat_path=[], Interval=15):
 
 # ─── Streamlit UI ─────────────────────────────────────────────────────────────
 
-st.set_page_config(page_title="Attendance Insights", page_icon="📊", layout="centered")
+st.set_page_config(page_title="Attendance Insights", page_icon="📊", layout="wide")
 st.title("📊 Attendance Insights Generator")
 st.caption("Upload your Zoom attendee report to generate an insights report.")
 
